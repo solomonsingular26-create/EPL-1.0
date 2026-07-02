@@ -72,6 +72,41 @@ function initials(name) {
   return String(name).trim().slice(0, 2).toUpperCase();
 }
 
+/* ---- player jerseys (home kits) ----
+   body / sleeve / trim colors per player. Add new players here;
+   anyone not listed gets a generic jersey in their avatar color. */
+const KITS = {
+  chelsea: { body: "#034694", sleeve: "#034694", trim: "#ffffff" },
+  manutd:  { body: "#DA291C", sleeve: "#DA291C", trim: "#ffffff" },
+  arsenal: { body: "#EF0107", sleeve: "#ffffff", trim: "#ffffff" },
+};
+const PLAYER_KITS = {
+  costa: KITS.chelsea,
+  dere: KITS.manutd,
+  dkc: KITS.arsenal,
+  ermo: KITS.arsenal,
+  mab: KITS.manutd,
+  solar: KITS.manutd,
+};
+function kitFor(name) {
+  const k = PLAYER_KITS[String(name).trim().toLowerCase()];
+  if (k) return k;
+  const c = avatarColor(name);
+  return { body: c, sleeve: c, trim: "#ffffff" };
+}
+function jerseyHTML(name) {
+  const k = kitFor(name);
+  return `<svg class="jersey" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M42 7 L56 13 L62 27 L51 31 L48 24 L48 56 L16 56 L16 24 L13 31 L2 27 L8 13 L22 7 C24 13 40 13 42 7 Z"
+      fill="${k.body}" stroke="#1e293b" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M8 13 L2 27 L13 31 L17 18 Z" fill="${k.sleeve}" stroke="#1e293b" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M56 13 L62 27 L51 31 L47 18 Z" fill="${k.sleeve}" stroke="#1e293b" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M22 7 C24 13 40 13 42 7 L38 5.5 C35.5 9.5 28.5 9.5 26 5.5 Z" fill="${k.trim}" stroke="#1e293b" stroke-width="2" stroke-linejoin="round"/>
+    <text x="32" y="42" text-anchor="middle" font-size="14" font-weight="800"
+      fill="${k.trim}" stroke="none">${esc(initials(name))}</text>
+  </svg>`;
+}
+
 /* ---- connect to the database ---- */
 const keysMissing =
   !firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_") ||
@@ -208,6 +243,7 @@ function render() {
   if (keysMissing) { renderSetup(); return; }
   if (tab === "fixtures") renderFixtures();
   else if (tab === "leaderboard") renderLeaderboard();
+  else if (tab === "stats") renderStats();
   else if (tab === "manage") {
     if (!manageUnlocked) renderPinGate();
     else renderManage();
@@ -364,20 +400,6 @@ function renderLeaderboard() {
   const rows = buildLeaderboard();
   const medals = ["🥇", "🥈", "🥉"];
 
-  // split banner: left half EPL (blue + lion), right half UCL (navy + starball)
-  const banner = `
-    <div class="lb-banner">
-      <div class="lb-banner-half lb-epl">
-        <span class="lb-banner-logo">🦁</span>
-        <span class="lb-banner-name">Premier<br>League</span>
-      </div>
-      <div class="lb-banner-half lb-ucl">
-        <span class="lb-banner-logo">⚽</span>
-        <span class="lb-banner-name">Champions<br>League</span>
-      </div>
-      <div class="lb-banner-title">Leaderboard</div>
-    </div>`;
-
   const list =
     rows.length === 0
       ? `<p class="note">No players yet. Add yourself on the Fixtures tab.</p>`
@@ -386,10 +408,9 @@ function renderLeaderboard() {
             const leader = i === 0 && r.points > 0;
             return `<div class="card lb-row ${leader ? "leader" : ""}">
               <div class="lb-rank">${i < 3 ? medals[i] : i + 1}</div>
-              <div class="avatar" style="background:${avatarColor(r.name)}">${esc(initials(r.name))}</div>
+              ${jerseyHTML(r.name)}
               <div class="lb-name">
                 <div class="n">${esc(r.name)}</div>
-                <div class="sub">${r.exact} exact · ${r.results} results</div>
               </div>
               <div class="lb-pts-wrap">
                 <div class="lb-pts-col">
@@ -409,7 +430,63 @@ function renderLeaderboard() {
           })
           .join("");
 
-  screen.innerHTML = banner + list;
+  screen.innerHTML = `<div class="big-title">Leaderboard</div>` + list;
+}
+
+/* ---------------------------------------------------------------------
+   OPTA STATS — per-player analytics (exact / result / miss breakdown)
+   ------------------------------------------------------------------- */
+function renderStats() {
+  document.getElementById("header-stage").textContent = "OPTA STATS";
+  const rows = buildLeaderboard();
+  const scoredGames = matches.filter(
+    (m) => m.finished && !isExcluded(m) && m.home_score != null && m.away_score != null
+  ).length;
+
+  const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+  const w = (n, d) => (d > 0 ? (n / d) * 100 : 0);
+
+  const cards =
+    rows.length === 0
+      ? `<p class="note">No players yet. Add yourself on the Fixtures tab.</p>`
+      : rows
+          .map((r) => {
+            const miss = r.scored - r.exact - r.results;
+            const acc = pct(r.exact + r.results, r.scored);          // % of picks that scored
+            const ppg = r.scored > 0 ? (r.points / r.scored).toFixed(1) : "0.0";
+            const bar = r.scored > 0
+              ? `<div class="stat-bar">
+                   <div class="seg-exact" style="width:${w(r.exact, r.scored)}%"></div>
+                   <div class="seg-result" style="width:${w(r.results, r.scored)}%"></div>
+                   <div class="seg-miss" style="width:${w(miss, r.scored)}%"></div>
+                 </div>`
+              : `<div class="stat-bar"></div>`;
+            return `<div class="card stat-row">
+              <div class="stat-head">
+                ${jerseyHTML(r.name)}
+                <div class="n">${esc(r.name)}</div>
+                <div class="pts">${r.points} <small>PTS</small></div>
+              </div>
+              ${bar}
+              <div class="legend">
+                <span><span class="dot" style="background:var(--accent)"></span>Exact ${r.exact}</span>
+                <span><span class="dot" style="background:var(--gold)"></span>Result ${r.results}</span>
+                <span><span class="dot" style="background:#cbd5e1"></span>Miss ${miss}</span>
+              </div>
+              <div class="stat-grid">
+                <div class="stat-cell exact"><div class="v">${pct(r.exact, r.scored)}%</div><div class="l">Exact rate</div></div>
+                <div class="stat-cell result"><div class="v">${acc}%</div><div class="l">Hit rate</div></div>
+                <div class="stat-cell"><div class="v">${ppg}</div><div class="l">Pts / game</div></div>
+                <div class="stat-cell"><div class="v">${r.eplPts}<span class="muted" style="font-size:11px"> / </span>${r.uclPts}</div><div class="l">EPL / UCL</div></div>
+              </div>
+            </div>`;
+          })
+          .join("");
+
+  screen.innerHTML = `
+    <div><span class="opta-title">📊 OPTA STATS</span></div>
+    <p class="note">${scoredGames} game${scoredGames === 1 ? "" : "s"} scored so far. Exact rate = perfect scorelines; hit rate = exact + correct results.</p>
+    ${cards}`;
 }
 
 /* ---------------------------------------------------------------------
