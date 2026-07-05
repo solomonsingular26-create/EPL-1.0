@@ -88,6 +88,7 @@ const PLAYER_KITS = {
   dere: KITS.manutd_away2,
   dkc: KITS.arsenal,
   ermo: KITS.arsenal_away,
+  ermi: KITS.arsenal_away,
   mab: KITS.manutd_away,
   solar: KITS.manutd,
 };
@@ -401,10 +402,8 @@ function buildLeaderboard() {
 function renderLeaderboard() {
   document.getElementById("header-stage").textContent = "TABLE";
   const rows = buildLeaderboard();
-  const medals = ["🥇", "🥈", "🥉"];
-  // sub-headers by position: 1 VIP, 2–3 top, 4–5 mid, 6 bottom
-  const subheadFor = (i) =>
-    i === 0 ? "VIP" : i === 1 ? "Top" : i === 3 ? "Mid Table" : i === 5 ? "Bottom" : null;
+  // rank badges: 1 king · 2 brain · 3 sniper · 4 lucky dice · 5 asleep · 6 wooden spoon
+  const badges = ["👑", "🧠", "🎯", "🎲", "😴", "🥄"];
 
   const list =
     rows.length === 0
@@ -412,25 +411,25 @@ function renderLeaderboard() {
       : rows
           .map((r, i) => {
             const leader = i === 0 && r.points > 0;
-            const sub = subheadFor(i);
-            return (sub ? `<div class="lb-subhead">${sub}</div>` : "") + `<div class="card lb-row ${leader ? "leader" : ""}">
-              <div class="lb-rank">${i < 3 ? medals[i] : i + 1}</div>
-              ${jerseyHTML(r.name)}
-              <div class="lb-name">
-                <div class="n">${esc(r.name)}</div>
+            const badge = i < badges.length ? badges[i] : String(i + 1);
+            return `<div class="card lb-row ${leader ? "leader" : ""}">
+              <div class="lb-badge ${i >= badges.length ? "num" : ""}" title="Rank ${i + 1}">${badge}</div>
+              <div class="lb-id">
+                ${jerseyHTML(r.name)}
+                <div class="lb-name">${esc(r.name)}</div>
               </div>
-              <div class="lb-pts-wrap">
-                <div class="lb-pts-col">
-                  <div class="lb-pts-label" title="Premier League">🦁</div>
-                  <div class="lb-pts-val">${r.eplPts}</div>
+              <div class="lb-stats">
+                <div class="lb-stat">
+                  <div class="lb-stat-val">🎯 ${r.exact} · ✅ ${r.results}</div>
+                  <div class="lb-stat-label">Exact · Result</div>
                 </div>
-                <div class="lb-pts-col">
-                  <div class="lb-pts-label" title="Champions League">⚽</div>
-                  <div class="lb-pts-val">${r.uclPts}</div>
+                <div class="lb-stat">
+                  <div class="lb-stat-val">🦁 ${r.eplPts} · ⚽ ${r.uclPts}</div>
+                  <div class="lb-stat-label">EPL · UCL</div>
                 </div>
-                <div class="lb-pts-col total">
-                  <div class="lb-pts-label">TOT</div>
-                  <div class="lb-pts-val ${leader ? "leader" : ""}">${r.points}</div>
+                <div class="lb-stat total">
+                  <div class="lb-stat-val ${leader ? "leader" : ""}">${r.points}</div>
+                  <div class="lb-stat-label">Total</div>
                 </div>
               </div>
             </div>`;

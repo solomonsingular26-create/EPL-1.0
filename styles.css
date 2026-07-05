@@ -72,9 +72,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   padding: 22px 20px 18px;
 }
 .header-top { font-size: 11px; letter-spacing: 2px; font-weight: 700; opacity: .8; text-transform: uppercase; }
-.header-row { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-.header h1 { font-size: 22px; margin: 0; font-weight: 800; }
-.ball { font-size: 28px; }
+.header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.header h1 { font-size: 17px; margin: 0; font-weight: 800; text-align: center; flex: 1; }
+.trophy { width: 42px; height: 42px; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
 
 /* ---- screens ---- */
 .screen { flex: 1; padding: 16px; padding-bottom: 90px; }
@@ -146,37 +146,39 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .btn.block { width: 100%; padding: 12px; font-size: 15px; border-radius: 12px; }
 .btn.sm { padding: 7px 10px; }
 
-/* table sub-headers (VIP / Top / Mid Table / Bottom) */
-.lb-subhead {
-  display: inline-block; background: rgba(255,255,255,.92); color: var(--ink);
-  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
-  border-radius: 999px; padding: 4px 12px; margin: 10px 4px 6px;
-  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+/* ---- leaderboard rows (card style: corner badge, centered name, stats below) ---- */
+.lb-row {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  gap: 6px; padding: 9px 10px 8px; margin-bottom: 9px; border-radius: 14px;
 }
-
-/* ---- leaderboard rows (compact, sized for phone screens) ---- */
-.lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px; border-radius: 14px; }
 .lb-row.leader { box-shadow: 0 0 0 2px var(--blue) inset; }
-.lb-rank { width: 24px; text-align: center; font-size: 17px; font-weight: 700; color: #94a3b8; flex-shrink:0; }
+
+/* rank badge pinned to the card's top-left corner */
+.lb-badge {
+  position: absolute; top: -9px; left: -7px;
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  font-size: 25px; background: #fff; border: 1px solid var(--line); border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,.18);
+}
+.lb-badge.num { font-size: 17px; font-weight: 800; color: #94a3b8; }
 
 /* jersey avatars */
 .jersey { width: 38px; height: 38px; flex-shrink: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
 .jersey text { font-family: inherit; }
 
-.lb-name { flex: 1; min-width: 0; }
-.lb-name .n { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* centered jersey + name lockup */
+.lb-id { display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
+.lb-id .jersey { width: 30px; height: 30px; }
+.lb-name { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* three-column pts (EPL 🦁 / UCL ⚽ / TOT) */
-.lb-pts-wrap { display: flex; gap: 6px; flex-shrink: 0; }
-.lb-pts-col { display: flex; flex-direction: column; align-items: center; min-width: 34px; }
-.lb-pts-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; line-height: 1; }
-.lb-pts-col.total .lb-pts-label { font-size: 9px; padding-top: 3px; }
-.lb-pts-val { font-size: 17px; font-weight: 800; line-height: 1; }
-.lb-pts-val.leader { color: var(--blue); }
-
-/* divider between EPL/UCL and TOT */
-.lb-pts-col.total { border-left: 1px solid var(--line); padding-left: 8px; margin-left: 2px; }
-.lb-pts-col.total .lb-pts-val { font-size: 20px; }
+/* three stats under the name: Exact·Result / EPL·UCL / Total */
+.lb-stats { display: flex; width: 100%; align-items: stretch; }
+.lb-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lb-stat + .lb-stat { border-left: 1px solid var(--line); }
+.lb-stat-val { font-size: 13px; font-weight: 800; line-height: 1.2; }
+.lb-stat.total .lb-stat-val { font-size: 16px; }
+.lb-stat-val.leader { color: var(--blue); }
+.lb-stat-label { font-size: 9px; font-weight: 700; letter-spacing: .6px; color: var(--muted); text-transform: uppercase; }
 
 /* frozen / not-counted games */
 .card.frozen { opacity: .5; }
