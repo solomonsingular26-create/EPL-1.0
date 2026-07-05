@@ -76,6 +76,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .header h1 { font-size: 17px; margin: 0; font-weight: 800; text-align: center; flex: 1; }
 .trophy { width: 42px; height: 42px; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
 
+/* red strip under the header */
+.dev-strip {
+  background: var(--et-red); color: #fff; text-align: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 5px 12px;
+}
+
 /* ---- screens ---- */
 .screen { flex: 1; padding: 16px; padding-bottom: 90px; }
 .loading { color: var(--muted); text-align: center; margin-top: 40px; }

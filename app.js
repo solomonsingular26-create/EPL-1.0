@@ -402,8 +402,8 @@ function buildLeaderboard() {
 function renderLeaderboard() {
   document.getElementById("header-stage").textContent = "TABLE";
   const rows = buildLeaderboard();
-  // rank badges: 1 king · 2 brain · 3 sniper · 4 lucky dice · 5 asleep · 6 wooden spoon
-  const badges = ["👑", "🧠", "🎯", "🎲", "😴", "🥄"];
+  // rank badges: 1 king · 2 brain · 3 sniper · 4 smile · 5 milk · 6 asleep
+  const badges = ["👑", "🧠", "🎯", "😊", "🥛", "😴"];
 
   const list =
     rows.length === 0
