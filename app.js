@@ -286,6 +286,8 @@ async function load() {
    ===================================================================== */
 function render() {
   if (keysMissing) { renderSetup(); return; }
+  // the Table screen gets a black background; everything else stays white
+  screen.classList.toggle("dark", tab === "leaderboard");
   if (tab === "fixtures") renderFixtures();
   else if (tab === "leaderboard") renderLeaderboard();
   else if (tab === "stats") renderStats();
@@ -454,22 +456,10 @@ function renderLeaderboard() {
               <div class="lb-badge ${i >= badges.length ? "num" : ""}" title="Rank ${i + 1}">${badge}</div>
               <div class="lb-id">
                 ${jerseyHTML(r.name)}
-                <div class="lb-name">${esc(r.name)}</div>
+                <div class="lb-name">${esc(r.name)}${leader ? `<span class="vip">VIP PRO</span>` : ""}</div>
               </div>
-              <div class="lb-stats">
-                <div class="lb-stat">
-                  <div class="lb-stat-val">🎯 ${r.exact} · ✅ ${r.results}</div>
-                  <div class="lb-stat-label">Exact · Result</div>
-                </div>
-                <div class="lb-stat">
-                  <div class="lb-stat-val">⚽ ${r.scored}</div>
-                  <div class="lb-stat-label">Games</div>
-                </div>
-                <div class="lb-stat total">
-                  <div class="lb-stat-val ${leader ? "leader" : ""}">${r.points}</div>
-                  <div class="lb-stat-label">Total</div>
-                </div>
-              </div>
+              <div class="lb-mid">🎯 ${r.exact} exact · ✅ ${r.results} correct · ⚽ ${r.scored} games</div>
+              <div class="lb-total">${r.points}<span>PTS</span></div>
             </div>`;
           })
           .join("");
