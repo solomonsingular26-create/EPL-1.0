@@ -29,24 +29,12 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* white dashboard background */
 body {
   margin: 0;
-  background: #8fd1aa;
+  background: #ffffff;
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* phone-width column, centered on desktop */
-/* Ethiopian flag 🇪🇹 as a soft wave, fixed behind everything.
-   (Done with a fixed pseudo-element because iOS Safari ignores
-   background-attachment: fixed.) Lighter, washed-out flag colors. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 900' preserveAspectRatio='none'%3E%3Crect width='400' height='900' fill='%238fd1aa'/%3E%3Cpath d='M0 300 C80 268 170 336 260 302 C325 278 365 312 400 292 L400 900 L0 900 Z' fill='%23fbeaa3'/%3E%3Cpath d='M0 615 C90 583 180 651 270 617 C335 593 370 627 400 607 L400 900 L0 900 Z' fill='%23f3adb1'/%3E%3C/svg%3E")
-    center / 100% 100% no-repeat;
 }
 
 .app {
@@ -91,13 +79,21 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .note { font-size: 13px; color: #4b5866; margin: 4px 4px 10px; }
 .big-title { font-size: 28px; font-weight: 800; margin: 0 4px 2px; color: var(--ink); }
 
-/* ---- cards ---- */
+/* ---- cards (white rows; light border so they read on the white page) ---- */
 .card {
   background: var(--card);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 12px 14px;
   box-shadow: 0 1px 2px rgba(0,0,0,.05);
   margin-bottom: 8px;
+}
+
+/* ---- gameweek picker (Fixtures + Manage) ---- */
+.weekbar { display: flex; align-items: center; gap: 10px; }
+.weekbar-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  color: var(--muted); text-transform: uppercase; white-space: nowrap;
 }
 
 /* ---- player bar ---- */
@@ -111,13 +107,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .chip.dashed { border-style: dashed; color: var(--muted); }
 .link { color: var(--green); font-weight: 700; font-size: 13px; text-decoration: underline; cursor: pointer; background: none; border: none; }
 
-/* ---- competition pill (EPL / UCL tag on each fixture) ---- */
+/* ---- competition pill (EPL tag on each fixture) ---- */
 .pill {
   display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: .5px;
   color: #fff; border-radius: 5px; padding: 2px 5px; vertical-align: 1px;
 }
 .pill.epl { background: linear-gradient(135deg, var(--epl-a), var(--epl-b)); }
-.pill.ucl { background: linear-gradient(135deg, var(--ucl-a), var(--ucl-b)); }
 
 /* ---- match row ---- */
 .match { display: flex; align-items: center; gap: 10px; }
@@ -178,7 +173,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .lb-id .jersey { width: 30px; height: 30px; }
 .lb-name { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* three stats under the name: Exact·Result / EPL·UCL / Total */
+/* three stats under the name: Exact·Result / Games / Total */
 .lb-stats { display: flex; width: 100%; align-items: stretch; }
 .lb-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .lb-stat + .lb-stat { border-left: 1px solid var(--line); }
@@ -192,8 +187,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* ---- manage ---- */
 .tabs { display: flex; gap: 8px; margin: 12px 0; }
-.tab { flex: 1; border: none; border-radius: 10px; padding: 9px; font-weight: 700; font-size: 12px; background: #fff; color: var(--muted); cursor: pointer; }
-.tab.active { background: var(--green); color: #fff; }
+.tab { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 9px; font-weight: 700; font-size: 12px; background: #fff; color: var(--muted); cursor: pointer; }
+.tab.active { background: var(--green); border-color: var(--green); color: #fff; }
 .row-mini { display: flex; align-items: center; gap: 8px; }
 .row-mini .grow { flex: 1; font-size: 14px; font-weight: 600; }
 .row-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }

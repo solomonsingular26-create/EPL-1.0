@@ -1,37 +1,14 @@
 /* ===================================================================
-   Embedded fixtures + starting players. Written into Firestore the
-   first time the app loads (see seedIfEmpty in load()).
-
-   Only WEEK 1 is pre-loaded:
-     • EPL Week 1  — the top 6 games of the 2026/27 opening gameweek
-                     (Aug 21–24, 2026), kickoff times prefilled.
-     • UCL MD 1    — 6 TBD placeholder slots (the league-phase draw is
-                     Aug 27; type the teams in Manage → Games).
-   Every later week is added by hand in Manage → Games — add as many
-   or as few games per week as you like.
+   Starting players. The full 380-game EPL fixture list lives in
+   fixtures.js (loaded before this file) and is written into Firestore
+   by seedIfNeeded() below.
    =================================================================== */
 const PLAYERS = ["Solar", "DKC", "Dere", "Ermo", "Costa", "Mab"];
-const FIXTURES = [
-  // ---- EPL · Week 1 (top 6 games, 2026/27 opening weekend) ----
-  { id: 1, comp: "EPL", week: 1, ordering: 0, slot_label: null, home_team: "Arsenal", away_team: "Coventry City", home_flag: "🔴", away_flag: "🔵", kickoff: "2026-08-21T19:00:00.000Z" },
-  { id: 2, comp: "EPL", week: 1, ordering: 1, slot_label: null, home_team: "Hull City", away_team: "Manchester United", home_flag: "🟠", away_flag: "🔴", kickoff: "2026-08-22T11:30:00.000Z" },
-  { id: 3, comp: "EPL", week: 1, ordering: 2, slot_label: null, home_team: "Brentford", away_team: "Tottenham Hotspur", home_flag: "🐝", away_flag: "⚪", kickoff: "2026-08-22T16:30:00.000Z" },
-  { id: 4, comp: "EPL", week: 1, ordering: 3, slot_label: null, home_team: "Manchester City", away_team: "Bournemouth", home_flag: "🔵", away_flag: "🍒", kickoff: "2026-08-23T13:00:00.000Z" },
-  { id: 5, comp: "EPL", week: 1, ordering: 4, slot_label: null, home_team: "Newcastle United", away_team: "Liverpool", home_flag: "⚫", away_flag: "🔴", kickoff: "2026-08-23T15:30:00.000Z" },
-  { id: 6, comp: "EPL", week: 1, ordering: 5, slot_label: null, home_team: "Fulham", away_team: "Chelsea", home_flag: "⚪", away_flag: "🔵", kickoff: "2026-08-24T19:00:00.000Z" },
-  // ---- UCL · Matchday 1 (Sep 8–10 — draw is Aug 27, fill in teams later) ----
-  { id: 7, comp: "UCL", week: 1, ordering: 6, slot_label: "Match 1", home_team: "TBD", away_team: "TBD", home_flag: "", away_flag: "", kickoff: null },
-  { id: 8, comp: "UCL", week: 1, ordering: 7, slot_label: "Match 2", home_team: "TBD", away_team: "TBD", home_flag: "", away_flag: "", kickoff: null },
-  { id: 9, comp: "UCL", week: 1, ordering: 8, slot_label: "Match 3", home_team: "TBD", away_team: "TBD", home_flag: "", away_flag: "", kickoff: null },
-  { id: 10, comp: "UCL", week: 1, ordering: 9, slot_label: "Match 4", home_team: "TBD", away_team: "TBD", home_flag: "", away_flag: "", kickoff: null },
-  { id: 11, comp: "UCL", week: 1, ordering: 10, slot_label: "Match 5", home_team: "TBD", away_team: "TBD", home_flag: "", away_flag: "", kickoff: null },
-  { id: 12, comp: "UCL", week: 1, ordering: 11, slot_label: "Match 6", home_team: "TBD", away_team: "TBD", home_flag: "", away_flag: "", kickoff: null },
-];
 
 /* =====================================================================
-   EPL & UCL Predictor — app logic (plain JavaScript)
+   EPL Predictor — app logic (plain JavaScript)
 
-   Three screens (Fixtures / Leaderboard / Manage) all live in this one
+   Screens (Fixtures / Table / Opta Stats / Manage) all live in this one
    file. Data is stored in Firebase (Firestore) so every phone shares the
    same leaderboard. No build step — just files a browser opens.
    ===================================================================== */
@@ -39,10 +16,9 @@ const FIXTURES = [
 /* ---- scoring rules (change these if you want) ---- */
 const POINTS = { EXACT: 20, RESULT: 15, MISS: 0 };
 
-/* ---- competitions ---- */
+/* ---- competition (EPL only) ---- */
 const COMPS = {
   EPL: { name: "Premier League", short: "EPL", logo: "🦁", weekWord: "Week" },
-  UCL: { name: "Champions League", short: "UCL", logo: "⚽", weekWord: "Matchday" },
 };
 
 /* ---- manage PIN ----
@@ -152,7 +128,7 @@ function compOf(m) {
   return COMPS[m.comp] || COMPS.EPL;
 }
 
-// "Premier League · Week 1" / "Champions League · Matchday 1"
+// "Premier League · Week 1"
 function weekTitle(m) {
   const c = compOf(m);
   return `${c.name} · ${c.weekWord} ${m.week}`;
@@ -174,8 +150,47 @@ function sectionsOf(list) {
     s.list.push(m);
     if (m.ordering < s.min) s.min = m.ordering;
   }
-  return [...map.values()].sort((a, b) => a.min - b.min);
+  // sort by week number so a game moved to another week files in correctly
+  return [...map.values()].sort((a, b) => a.week - b.week || a.min - b.min);
 }
+
+/* ---- week filter (Fixtures + Manage) ----
+   The season is 38 weeks × 10 games, so screens show one week at a
+   time. Default: the first week that still has an unfinished game. */
+let weekFilter = null; // null = auto, "all" = everything, or a week number
+
+function currentWeek() {
+  const open = matches.filter((m) => !m.finished);
+  if (open.length === 0) return matches.length ? Math.max(...matches.map((m) => m.week)) : 1;
+  return Math.min(...open.map((m) => m.week));
+}
+
+function activeWeek() {
+  return weekFilter === null ? currentWeek() : weekFilter;
+}
+
+function visibleMatches() {
+  const w = activeWeek();
+  return w === "all" ? matches : matches.filter((m) => m.week === w);
+}
+
+function weekSelectHTML() {
+  const w = activeWeek();
+  const maxWeek = matches.length ? Math.max(...matches.map((m) => m.week)) : 38;
+  let opts = `<option value="all" ${w === "all" ? "selected" : ""}>All weeks</option>`;
+  for (let n = 1; n <= maxWeek; n++) {
+    opts += `<option value="${n}" ${w === n ? "selected" : ""}>Week ${n}</option>`;
+  }
+  return `<div class="card weekbar">
+    <span class="weekbar-label">Gameweek</span>
+    <select class="select" style="margin:0;flex:1" onchange="setWeek(this.value)">${opts}</select>
+  </div>`;
+}
+
+window.setWeek = (v) => {
+  weekFilter = v === "all" ? "all" : Math.max(1, Math.trunc(Number(v)) || 1);
+  render();
+};
 
 /* ---- prediction deadline ----
    A match has an optional `kickoff` (an ISO timestamp). Once that moment
@@ -208,26 +223,52 @@ function slug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "player";
 }
 
-async function seedIfEmpty() {
-  const snap = await dbf.collection("matches").limit(1).get();
-  if (!snap.empty) return; // matches exist — never touch them
-  // Only reaches here if the collection is truly empty (first ever run)
-  const batch = dbf.batch();
-  for (const f of FIXTURES) {
-    const ref = dbf.collection("matches").doc(String(f.id));
-    // set() with merge:true means it ONLY writes fields that don't exist yet.
-    // If a document already has home_score set, it will NOT be overwritten.
-    batch.set(ref, { ...f, home_score: null, away_score: null, finished: false }, { merge: true });
+/* Version-based seeding. Bump SEED_VERSION when the FIXTURES list in
+   fixtures.js changes in a big way: the app then wipes old matches
+   (and old predictions, which point at the old game IDs) and writes
+   the fresh list. Results/edits you make in Manage are per-match-doc
+   updates and are untouched between version bumps. */
+const SEED_VERSION = 2; // v2 = UCL removed, all 380 EPL games added
+
+async function seedIfNeeded() {
+  const metaRef = dbf.collection("meta").doc("seed");
+  const meta = await metaRef.get();
+  if (meta.exists && (meta.data().version || 0) >= SEED_VERSION) return;
+
+  // wipe old matches + predictions (IDs change between versions)
+  const [oldM, oldP] = await Promise.all([
+    dbf.collection("matches").get(),
+    dbf.collection("predictions").get(),
+  ]);
+  const stale = [...oldM.docs, ...oldP.docs];
+  while (stale.length) {
+    const b = dbf.batch();
+    for (const d of stale.splice(0, 400)) b.delete(d.ref);
+    await b.commit();
   }
+
+  // write the full fixture list in chunks (Firestore batch limit is 500)
+  const queue = [...FIXTURES];
+  while (queue.length) {
+    const b = dbf.batch();
+    for (const f of queue.splice(0, 400)) {
+      b.set(dbf.collection("matches").doc(String(f.id)),
+        { ...f, home_score: null, away_score: null, finished: false });
+    }
+    await b.commit();
+  }
+
+  const b = dbf.batch();
   for (const name of PLAYERS) {
-    batch.set(dbf.collection("players").doc(slug(name)), { name }, { merge: true });
+    b.set(dbf.collection("players").doc(slug(name)), { name }, { merge: true });
   }
-  await batch.commit();
+  b.set(metaRef, { version: SEED_VERSION });
+  await b.commit();
 }
 
 async function load() {
   if (!dbf) return;
-  await seedIfEmpty();
+  await seedIfNeeded();
   const [pSnap, mSnap, prSnap] = await Promise.all([
     dbf.collection("players").get(),
     dbf.collection("matches").get(),
@@ -329,7 +370,7 @@ function matchRowHTML(m) {
     ? ` · ${closed ? "closed" : "closes"} ${kickoffLabel(m.kickoff)}`
     : "";
 
-  const pill = `<span class="pill ${m.comp === "UCL" ? "ucl" : "epl"}">${compOf(m).short}</span>`;
+  const pill = `<span class="pill epl">${compOf(m).short}</span>`;
   const left = pill + " " + shortLabel(m) +
     (m.slot_label ? ` · ${esc(m.slot_label)}` : "") + kickoff;
 
@@ -351,7 +392,7 @@ function matchRowHTML(m) {
 
 function renderFixtures() {
   document.getElementById("header-stage").textContent = "FIXTURES";
-  const sections = sectionsOf(matches);
+  const sections = sectionsOf(visibleMatches());
 
   const body = sections.length
     ? sections
@@ -361,13 +402,13 @@ function renderFixtures() {
             s.list.map(matchRowHTML).join("")
         )
         .join("")
-    : `<p class="note">No games yet — add this week's games in Manage → Games.</p>`;
+    : `<p class="note">No games in this week — pick another week, or add games in Manage → Games.</p>`;
 
-  screen.innerHTML = playerBarHTML() + body;
+  screen.innerHTML = playerBarHTML() + weekSelectHTML() + body;
 }
 
 /* ---------------------------------------------------------------------
-   LEADERBOARD — split into EPL / UCL / Total columns
+   LEADERBOARD — Exact·Result / Games / Total columns
    ------------------------------------------------------------------- */
 function buildLeaderboard() {
   const finished = new Map(
@@ -378,8 +419,7 @@ function buildLeaderboard() {
   const rows = new Map();
   for (const p of players) rows.set(p.id, {
     name: p.name,
-    eplPts: 0, uclPts: 0, points: 0,
-    exact: 0, results: 0, scored: 0,
+    points: 0, exact: 0, results: 0, scored: 0,
   });
 
   for (const pr of predictions) {
@@ -389,8 +429,6 @@ function buildLeaderboard() {
     row.scored++;
     const s = scorePrediction(pr.home_score, pr.away_score, m.home_score, m.away_score);
     row.points += s.pts;
-    if (m.comp === "UCL") row.uclPts += s.pts;
-    else row.eplPts += s.pts;
     if (s.kind === "exact") row.exact++;
     else if (s.kind === "result") row.results++;
   }
@@ -424,8 +462,8 @@ function renderLeaderboard() {
                   <div class="lb-stat-label">Exact · Result</div>
                 </div>
                 <div class="lb-stat">
-                  <div class="lb-stat-val">🦁 ${r.eplPts} · ⚽ ${r.uclPts}</div>
-                  <div class="lb-stat-label">EPL · UCL</div>
+                  <div class="lb-stat-val">⚽ ${r.scored}</div>
+                  <div class="lb-stat-label">Games</div>
                 </div>
                 <div class="lb-stat total">
                   <div class="lb-stat-val ${leader ? "leader" : ""}">${r.points}</div>
@@ -483,7 +521,7 @@ function renderStats() {
                 <div class="stat-cell exact"><div class="v">${pct(r.exact, r.scored)}%</div><div class="l">Exact rate</div></div>
                 <div class="stat-cell result"><div class="v">${acc}%</div><div class="l">Hit rate</div></div>
                 <div class="stat-cell"><div class="v">${ppg}</div><div class="l">Pts / game</div></div>
-                <div class="stat-cell"><div class="v">${r.eplPts}<span class="muted" style="font-size:11px"> / </span>${r.uclPts}</div><div class="l">EPL / UCL</div></div>
+                <div class="stat-cell"><div class="v">${r.scored}</div><div class="l">Games</div></div>
               </div>
             </div>`;
           })
@@ -513,7 +551,7 @@ function renderManage() {
     </div>`;
 
   let body = "";
-  const playable = matches.filter((m) => m.home_team !== "TBD" && m.away_team !== "TBD");
+  const playable = visibleMatches().filter((m) => m.home_team !== "TBD" && m.away_team !== "TBD");
 
   if (manageTab === "results") {
     body =
@@ -540,7 +578,7 @@ function renderManage() {
       <div class="big-title" style="font-size:22px;margin:0">Manage</div>
       <button class="btn ghost sm" onclick="lockManage()">🔒 Lock</button>
     </div>
-    ${tabs}${body}`;
+    ${weekSelectHTML()}${tabs}${body}`;
 }
 
 function manageLabel(m) {
@@ -600,19 +638,17 @@ function deadlineRowHTML(m) {
   </div>`;
 }
 
-/* ---- Games tab: add games week by week + edit / delete any game ---- */
+/* ---- Games tab: edit / move / delete any game, or add extra ones ---- */
 function gamesBody() {
-  const nextEplWeek = Math.max(0, ...matches.filter((m) => m.comp === "EPL").map((m) => m.week)) || 1;
+  const w = activeWeek();
+  const defWeek = w === "all" ? 1 : w;
   const addForm = `
-    <p class="note">Add this week's games — the top 6 EPL games, and as many UCL games as you want. Set the badge emojis (optional), teams, week number, and an optional kickoff/deadline.</p>
+    <p class="note">All 380 games are pre-loaded. Move a game to a different week by changing its week number and hitting Save; delete a game with 🗑. You can also add an extra game below — set the badge emojis (optional), teams, week number, and an optional kickoff/deadline.</p>
     <div class="card">
       <div class="row-label">Add a game</div>
       <div class="add-grid">
-        <select id="ag-comp" class="select" style="margin:0">
-          <option value="EPL">🦁 EPL</option>
-          <option value="UCL">⚽ UCL</option>
-        </select>
-        <input type="number" min="1" max="99" id="ag-week" value="${nextEplWeek}" placeholder="Week #" title="Week / matchday number">
+        <span class="muted" style="align-self:center;font-size:12px;font-weight:700">Week #</span>
+        <input type="number" min="1" max="99" id="ag-week" value="${defWeek}" placeholder="Week #" title="Week number">
       </div>
       <div class="ko-grid" style="margin-top:6px">
         <input class="flag" id="ag-hf" placeholder="🔴">
@@ -624,7 +660,7 @@ function gamesBody() {
       <button class="btn block sm" style="margin-top:8px" onclick="addGame()">+ Add game</button>
     </div>`;
 
-  const list = sectionsOf(matches)
+  const list = sectionsOf(visibleMatches())
     .map(
       (s) =>
         `<div class="section-title">${s.title}</div>` +
@@ -787,7 +823,7 @@ window.closeWeek = async (comp, week) => {
 
 // ---- Games: add / edit / delete ----
 window.addGame = async () => {
-  const comp = document.getElementById("ag-comp").value;
+  const comp = "EPL";
   const week = Math.max(1, Math.trunc(Number(document.getElementById("ag-week").value)) || 1);
   const homeTeam = document.getElementById("ag-ht").value.trim() || "TBD";
   const awayTeam = document.getElementById("ag-at").value.trim() || "TBD";
