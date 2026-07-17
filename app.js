@@ -461,7 +461,7 @@ function renderLeaderboard() {
   const medals = ["🥇", "🥈", "🥉"];
 
   const rowHTML = (r, i) => {
-    const leader = i === 0 && r.points > 0;
+    const leader = i === 0;
     const last = n >= 4 && i === n - 1;
     const badge = i < medals.length ? medals[i] : String(i + 1);
     return `<div class="card lb-row ${leader ? "leader" : ""} ${last ? "last" : ""}">
