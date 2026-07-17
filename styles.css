@@ -153,58 +153,73 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .screen.dark .big-title { color: #fff; }
 .screen.dark .note { color: #cbd5e1; }
 
-/* ---- leaderboard rows: jersey + name left, italic stats middle, total right ---- */
+/* ---- leaderboard: tiered cards (VIP/PRO · TOP · MID TABLE · QIX) ---- */
+.lb-tier {
+  color: #fff; font-size: 13px; font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase;
+  margin: 16px 4px 8px;
+}
 .lb-row {
-  position: relative; display: flex; align-items: center;
-  gap: 10px; padding: 12px 12px 12px 16px; margin-bottom: 10px; border-radius: 14px;
+  position: relative; display: flex; align-items: center; overflow: hidden;
+  gap: 10px; padding: 14px 16px; margin-bottom: 10px; border-radius: 18px;
+  border: none;
 }
 
-/* #1 player — VIP Pro gold row */
-.lb-row.leader {
-  background: linear-gradient(135deg, #fff3c4 0%, #fbd85d 45%, #eab308 100%);
-  border-color: #d4af37;
-  box-shadow: 0 2px 10px rgba(234, 179, 8, .45);
-}
-.vip {
-  display: inline-block; margin-left: 6px; padding: 2px 6px; vertical-align: 1px;
-  background: #1f2937; color: #fcd34d; border-radius: 6px;
-  font-size: 8px; font-weight: 800; letter-spacing: 1px; font-style: normal;
-}
-
-/* rank badge pinned to the card's top-left corner */
-.lb-badge {
-  position: absolute; top: -9px; left: -7px;
-  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-  font-size: 25px; background: #fff; border: 1px solid var(--line); border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(0,0,0,.18);
-}
-.lb-badge.num { font-size: 17px; font-weight: 800; color: #94a3b8; }
+/* rank medal / number */
+.lb-rank { font-size: 30px; flex-shrink: 0; line-height: 1; }
+.lb-rank.num { font-size: 21px; font-weight: 800; color: #94a3b8; width: 28px; text-align: center; }
 
 /* jersey avatars */
-.jersey { width: 38px; height: 38px; flex-shrink: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
+.jersey { width: 46px; height: 46px; flex-shrink: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)); }
 .jersey text { font-family: inherit; }
 
-/* left: jersey + name */
-.lb-id { display: flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 0; max-width: 45%; }
-.lb-id .jersey { width: 30px; height: 30px; }
-.lb-name { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* middle: small italic stats (exact · correct · games) */
-.lb-mid {
-  flex: 1; min-width: 0; text-align: center;
-  font-size: 10.5px; font-style: italic; font-weight: 600; color: var(--muted);
+/* name + italic subtitle inline */
+.lb-main { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.lb-name { font-size: 21px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-sub {
+  font-size: 13px; font-style: italic; font-weight: 600; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.lb-row.leader .lb-mid { color: #713f12; }
 
-/* right: total points */
+/* right: TOT label over big total */
 .lb-total {
-  display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
-  font-size: 20px; font-weight: 800; line-height: 1; color: var(--ink);
+  display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0;
+  font-size: 30px; font-weight: 800; line-height: 1.05; color: var(--ink);
+  z-index: 1;
 }
-.lb-total span { font-size: 8px; font-weight: 800; letter-spacing: 1.2px; color: var(--muted); margin-top: 2px; }
-.lb-row.leader .lb-total { color: #713f12; }
+.lb-total span { font-size: 10px; font-weight: 800; letter-spacing: 2px; color: var(--muted); }
+
+/* #1 player — VIP/PRO gold card */
+.lb-row.leader {
+  background: linear-gradient(135deg, #fff8dc 0%, #fdeaa8 55%, #fbd66a 100%);
+  border: 2px solid #f59e0b;
+  box-shadow: 0 2px 14px rgba(234, 179, 8, .5);
+}
+.lb-row.leader .lb-total { color: #d97706; font-size: 34px; }
 .lb-row.leader .lb-total span { color: #92400e; }
+.lb-row.leader .lb-sub { color: #713f12; }
+
+/* confetti decorations on the leader card */
+.lb-deco { position: absolute; font-size: 15px; opacity: .9; pointer-events: none; }
+.lb-deco.d1 { top: 4px; left: 8px; }
+.lb-deco.d2 { top: -2px; left: 42%; font-size: 18px; }
+.lb-deco.d3 { top: 6px; right: 34%; }
+.lb-deco.d4 { bottom: 2px; right: 26%; }
+
+/* last place — QIX greyed card with clown */
+.lb-row.last {
+  background: linear-gradient(135deg, #3c4454 0%, #5b6577 100%);
+  opacity: .92;
+}
+.lb-row.last .lb-name { color: #fff; }
+.lb-row.last .lb-sub { color: #cbd5e1; }
+.lb-row.last .lb-rank.num { color: #cbd5e1; }
+.lb-row.last .lb-total { color: #fff; }
+.lb-row.last .lb-total span { color: #cbd5e1; }
+.lb-clown {
+  position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
+  font-size: 52px; opacity: .85; pointer-events: none;
+}
 
 /* frozen / not-counted games */
 .card.frozen { opacity: .5; }

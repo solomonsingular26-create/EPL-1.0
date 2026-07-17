@@ -102,6 +102,7 @@ if (!keysMissing) {
 let players = [];      // [{id, name}]
 let matches = [];      // every game added so far
 let predictions = [];  // every prediction by everyone
+let openWeeks = new Set(); // "comp|week" keys the admin has opened for picks
 let tab = "fixtures";
 let manageTab = "results";
 let myId = localStorage.getItem("plucl_player_id");
@@ -200,6 +201,15 @@ function isClosed(m) {
   return !!m.kickoff && new Date(m.kickoff).getTime() <= Date.now();
 }
 
+/* ---- week activation ----
+   Every week starts CLOSED for predictions, even when its games are
+   visible. The admin opens a week from Manage → Deadlines; the list of
+   open weeks lives in Firestore (meta/openWeeks) so everyone sees it. */
+const weekKey = (comp, week) => `${comp}|${week}`;
+function isWeekOpen(m) {
+  return openWeeks.has(weekKey(m.comp, m.week));
+}
+
 // ISO (UTC) -> value for a <input type="datetime-local"> in the viewer's local time
 function toLocalInput(iso) {
   if (!iso) return "";
@@ -269,16 +279,18 @@ async function seedIfNeeded() {
 async function load() {
   if (!dbf) return;
   await seedIfNeeded();
-  const [pSnap, mSnap, prSnap] = await Promise.all([
+  const [pSnap, mSnap, prSnap, owSnap] = await Promise.all([
     dbf.collection("players").get(),
     dbf.collection("matches").get(),
     dbf.collection("predictions").get(),
+    dbf.collection("meta").doc("openWeeks").get(),
   ]);
   players = pSnap.docs.map((d) => ({ id: d.id, name: d.data().name }));
   players.sort((a, b) => a.name.localeCompare(b.name));
   matches = mSnap.docs.map((d) => d.data());
   matches.sort((a, b) => a.ordering - b.ordering);
   predictions = prSnap.docs.map((d) => d.data());
+  openWeeks = new Set(owSnap.exists ? owSnap.data().keys || [] : []);
 }
 
 /* =====================================================================
@@ -336,7 +348,8 @@ function matchRowHTML(m) {
   const mine = myPredFor(m.id);
   const closed = isClosed(m); // past its kickoff/deadline
   const frozen = isExcluded(m); // not counted in the leaderboard
-  const locked = m.finished || isTbd || !!mine || closed || frozen;
+  const notOpen = !isWeekOpen(m); // week not activated by the admin yet
+  const locked = m.finished || isTbd || !!mine || closed || frozen || notOpen;
 
   const result = m.finished
     ? `<div class="result"><div>${m.home_score}</div><div>${m.away_score}</div></div>`
@@ -363,6 +376,8 @@ function matchRowHTML(m) {
     foot = `<span class="locked">locked 🔒</span>`;
   } else if (closed) {
     foot = `<span class="locked">picks closed 🔒</span>`;
+  } else if (notOpen) {
+    foot = `<span class="locked">predictions not open yet 🔒</span>`;
   } else {
     foot = `<button class="link" onclick="savePick(${m.id})">lock in pick</button>`;
   }
@@ -442,29 +457,49 @@ function buildLeaderboard() {
 function renderLeaderboard() {
   document.getElementById("header-stage").textContent = "TABLE";
   const rows = buildLeaderboard();
-  // rank badges: 1 king · 2 brain · 3 sniper · 4 smile · 5 milk · 6 asleep
-  const badges = ["👑", "🧠", "🎯", "😊", "🥛", "😴"];
+  const n = rows.length;
+  const medals = ["🥇", "🥈", "🥉"];
 
-  const list =
-    rows.length === 0
-      ? `<p class="note">No players yet. Add yourself on the Fixtures tab.</p>`
-      : rows
-          .map((r, i) => {
-            const leader = i === 0 && r.points > 0;
-            const badge = i < badges.length ? badges[i] : String(i + 1);
-            return `<div class="card lb-row ${leader ? "leader" : ""}">
-              <div class="lb-badge ${i >= badges.length ? "num" : ""}" title="Rank ${i + 1}">${badge}</div>
-              <div class="lb-id">
-                ${jerseyHTML(r.name)}
-                <div class="lb-name">${esc(r.name)}${leader ? `<span class="vip">VIP PRO</span>` : ""}</div>
-              </div>
-              <div class="lb-mid">🎯 ${r.exact} exact · ✅ ${r.results} correct · ⚽ ${r.scored} games</div>
-              <div class="lb-total">${r.points}<span>PTS</span></div>
-            </div>`;
-          })
-          .join("");
+  const rowHTML = (r, i) => {
+    const leader = i === 0 && r.points > 0;
+    const last = n >= 4 && i === n - 1;
+    const badge = i < medals.length ? medals[i] : String(i + 1);
+    return `<div class="card lb-row ${leader ? "leader" : ""} ${last ? "last" : ""}">
+      <div class="lb-rank ${i >= medals.length ? "num" : ""}" title="Rank ${i + 1}">${badge}</div>
+      ${jerseyHTML(r.name)}
+      <div class="lb-main">
+        <span class="lb-name">${esc(r.name)}</span>
+        <span class="lb-sub">${r.exact} exact · ${r.results} results</span>
+      </div>
+      ${leader ? `<span class="lb-deco d1">🎉</span><span class="lb-deco d2">👑</span><span class="lb-deco d3">✨</span><span class="lb-deco d4">🎈</span>` : ""}
+      ${last ? `<span class="lb-clown">🤡</span>` : ""}
+      <div class="lb-total"><span>TOT</span>${r.points}</div>
+    </div>`;
+  };
 
-  screen.innerHTML = `<div class="big-title">Table</div>` + list;
+  let body;
+  if (n === 0) {
+    body = `<p class="note">No players yet. Add yourself on the Fixtures tab.</p>`;
+  } else {
+    // tiers: 1 = VIP/PRO · 2-3 = TOP · middle = MID TABLE · last = QIX
+    const parts = [];
+    parts.push(`<div class="lb-tier">👑 VIP / PRO</div>`, rowHTML(rows[0], 0));
+    if (n > 1) {
+      parts.push(`<div class="lb-tier">TOP</div>`);
+      rows.slice(1, 3).forEach((r, k) => parts.push(rowHTML(r, k + 1)));
+    }
+    const midEnd = n >= 4 ? n - 1 : n;
+    if (midEnd > 3) {
+      parts.push(`<div class="lb-tier">MID TABLE</div>`);
+      rows.slice(3, midEnd).forEach((r, k) => parts.push(rowHTML(r, k + 3)));
+    }
+    if (n >= 4) {
+      parts.push(`<div class="lb-tier">QIX</div>`, rowHTML(rows[n - 1], n - 1));
+    }
+    body = parts.join("");
+  }
+
+  screen.innerHTML = `<div class="big-title">Leaderboard</div>` + body;
 }
 
 /* ---------------------------------------------------------------------
@@ -549,7 +584,7 @@ function renderManage() {
       playable.map(resultRowHTML).join("");
   } else if (manageTab === "deadlines") {
     body =
-      `<p class="note">Set when picks close for each game. After the deadline, players can't add or change a prediction. Set a kickoff time, or hit <b>Close now</b> to lock a game (or a whole week) immediately.</p>` +
+      `<p class="note">Every week starts <b>closed</b> — players can see the games but can't predict until you open the week with its toggle. You can also set per-game kickoff deadlines, or hit <b>Close now</b> to lock a game immediately.</p>` +
       deadlinesBody(playable);
   } else if (manageTab === "games") {
     body = gamesBody();
@@ -588,16 +623,22 @@ function resultRowHTML(m) {
   </div>`;
 }
 
-/* ---- Deadlines tab: group games into weeks, each with a bulk "Close all now" ---- */
+/* ---- Deadlines tab: group games into weeks, each with an Open-picks
+   toggle (weeks start closed) and a bulk "Close all now" ---- */
 function deadlinesBody(playable) {
   return sectionsOf(playable)
     .map((s) => {
+      const weekOpen = openWeeks.has(weekKey(s.comp, s.week));
+      const toggle = weekOpen
+        ? `<button class="btn sm" onclick="toggleWeekOpen('${s.comp}', ${s.week})">🔓 Picks OPEN — close</button>`
+        : `<button class="btn ghost sm" onclick="toggleWeekOpen('${s.comp}', ${s.week})">🔒 Picks closed — open</button>`;
       const anyOpen = s.list.some((m) => !m.finished && !isClosed(m));
-      const btn = anyOpen
+      const btn = anyOpen && weekOpen
         ? `<button class="btn ghost sm" onclick="closeWeek('${s.comp}', ${s.week})">Close all now</button>`
-        : `<span class="ok">all closed ✓</span>`;
-      return `<div style="display:flex;align-items:center;justify-content:space-between;margin:16px 4px 6px">
-          <span class="section-title" style="margin:0">${s.title}</span>${btn}
+        : "";
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin:16px 4px 6px">
+          <span class="section-title" style="margin:0">${s.title}</span>
+          <span style="display:flex;gap:6px">${toggle}${btn}</span>
         </div>` + s.list.map(deadlineRowHTML).join("");
     })
     .join("");
@@ -740,7 +781,7 @@ window.savePick = async (matchId) => {
   const h = num(`h-${matchId}`), a = num(`a-${matchId}`);
   if (h === null || a === null) { document.getElementById(`foot-${matchId}`).innerHTML = '<span class="pts-miss">enter both</span>'; return; }
   const m = matches.find((x) => x.id === matchId);
-  if (m && (isClosed(m) || isExcluded(m))) { // deadline passed or frozen — refuse
+  if (m && (isClosed(m) || isExcluded(m) || !isWeekOpen(m))) { // deadline passed, frozen, or week not opened — refuse
     await refresh();
     return;
   }
@@ -790,6 +831,23 @@ window.closeNow = async (matchId) => {
 window.clearKickoff = async (matchId) => {
   try {
     await dbf.collection("matches").doc(String(matchId)).update({ kickoff: null });
+    await refresh();
+  } catch (e) { alert(e.message); }
+};
+
+// Open or close a whole week for predictions (weeks start closed).
+window.toggleWeekOpen = async (comp, week) => {
+  const key = weekKey(comp, week);
+  const next = new Set(openWeeks);
+  if (next.has(key)) {
+    if (!confirm(`Close Week ${week} for predictions? Players won't be able to enter picks.`)) return;
+    next.delete(key);
+  } else {
+    if (!confirm(`Open Week ${week} for predictions? Players will be able to enter picks.`)) return;
+    next.add(key);
+  }
+  try {
+    await dbf.collection("meta").doc("openWeeks").set({ keys: [...next] });
     await refresh();
   } catch (e) { alert(e.message); }
 };
