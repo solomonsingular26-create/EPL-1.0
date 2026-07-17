@@ -191,9 +191,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* #1 player — VIP/PRO gold card */
 .lb-row.leader {
-  background: linear-gradient(135deg, #fff8dc 0%, #fdeaa8 55%, #fbd66a 100%);
-  border: 2px solid #f59e0b;
-  box-shadow: 0 2px 14px rgba(234, 179, 8, .5);
+  background:
+    radial-gradient(circle at 75% 30%, rgba(255,255,255,.65) 0 18px, transparent 40px),
+    linear-gradient(135deg, #fffbe6 0%, #fde68a 45%, #f9c22e 100%);
+  border: 3px solid #f59e0b;
+  box-shadow: 0 0 18px rgba(245, 158, 11, .75), 0 2px 10px rgba(234, 179, 8, .45);
 }
 .lb-row.leader .lb-total { color: #d97706; font-size: 34px; }
 .lb-row.leader .lb-total span { color: #92400e; }
@@ -217,6 +219,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .lb-row.last .lb-total { color: #fff; }
 .lb-row.last .lb-total span { color: #cbd5e1; }
 .lb-clown {
+  position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
+  font-size: 52px; opacity: .85; pointer-events: none;
+}
+
+/* big king behind the leader's total — same style as the clown */
+.lb-king {
   position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
   font-size: 52px; opacity: .85; pointer-events: none;
 }

@@ -471,7 +471,7 @@ function renderLeaderboard() {
         <span class="lb-name">${esc(r.name)}</span>
         <span class="lb-sub">${r.exact} exact · ${r.results} results</span>
       </div>
-      ${leader ? `<span class="lb-deco d1">🎉</span><span class="lb-deco d2">👑</span><span class="lb-deco d3">✨</span><span class="lb-deco d4">🎈</span>` : ""}
+      ${leader ? `<span class="lb-deco d1">🎉</span><span class="lb-deco d2">🎊</span><span class="lb-deco d3">✨</span><span class="lb-deco d4">🎈</span><span class="lb-king">👑</span>` : ""}
       ${last ? `<span class="lb-clown">🤡</span>` : ""}
       <div class="lb-total"><span>TOT</span>${r.points}</div>
     </div>`;
