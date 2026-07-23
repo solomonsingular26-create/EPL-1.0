@@ -34,7 +34,7 @@ body {
   margin: 0;
   background: #ffffff;
   color: var(--ink);
-  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .app {
@@ -57,7 +57,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     radial-gradient(circle at 72% 78%, rgba(255,255,255,.08) 0 16px, transparent 17px),
     linear-gradient(100deg, var(--epl-a) 0%, var(--epl-b) 49.8%, var(--ucl-b) 50.2%, var(--ucl-a) 100%);
   color: #fff;
-  padding: 22px 12px 18px;
+  padding: 22px 20px 18px;
 }
 .header-top { font-size: 11px; letter-spacing: 2px; font-weight: 700; opacity: .8; text-transform: uppercase; }
 .header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
@@ -157,11 +157,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .lb-tier {
   color: #fff; font-size: 13px; font-weight: 800;
   letter-spacing: 3px; text-transform: uppercase;
-  margin: 9px 4px 5px;
+  margin: 16px 4px 8px;
 }
 .lb-row {
   position: relative; display: flex; align-items: center; overflow: hidden;
-  gap: 10px; padding: 14px 16px; margin-bottom: 5px; border-radius: 18px;
+  gap: 10px; padding: 14px 16px; margin-bottom: 10px; border-radius: 18px;
   border: none;
 }
 

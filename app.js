@@ -436,11 +436,8 @@ function buildLeaderboard() {
   const rows = new Map();
   for (const p of players) rows.set(p.id, {
     name: p.name,
-    points: 0, exact: 0, results: 0, scored: 0, weeksWon: 0,
+    points: 0, exact: 0, results: 0, scored: 0,
   });
-
-  // per-week points, keyed by "comp|week", for the weeks-won count
-  const weekBuckets = new Map();
 
   for (const pr of predictions) {
     const m = finished.get(pr.match_id);
@@ -451,41 +448,10 @@ function buildLeaderboard() {
     row.points += s.pts;
     if (s.kind === "exact") row.exact++;
     else if (s.kind === "result") row.results++;
-
-    const wk = m.comp + "|" + m.week;
-    let bucket = weekBuckets.get(wk);
-    if (!bucket) { bucket = new Map(); weekBuckets.set(wk, bucket); }
-    bucket.set(pr.player_id, (bucket.get(pr.player_id) || 0) + s.pts);
   }
-
-  // a "week win" = most points that week; ties are co-wins (all leaders get one)
-  for (const bucket of weekBuckets.values()) {
-    let max = 0;
-    for (const v of bucket.values()) if (v > max) max = v;
-    if (max <= 0) continue;
-    for (const [pid, v] of bucket) {
-      if (v === max) { const row = rows.get(pid); if (row) row.weeksWon++; }
-    }
-  }
-
   return [...rows.values()].sort(
     (a, b) => b.points - a.points || b.exact - a.exact || a.name.localeCompare(b.name)
   );
-}
-
-// player name -> Amharic spelling shown in parentheses on the leaderboard.
-// Add new players here (match is case-insensitive on the English name).
-const AMHARIC_NAMES = {
-  "ermo": "ኤርሞ",
-  "dkc": "ደምስ",
-  "dere": "ደሬ",
-  "solar": "ሶል",
-  "mab": "ማብ",
-  "costa": "ዮን",
-};
-function amharic(name) {
-  const am = AMHARIC_NAMES[String(name || "").trim().toLowerCase()];
-  return am ? ` (${am})` : "";
 }
 
 function renderLeaderboard() {
@@ -495,15 +461,15 @@ function renderLeaderboard() {
   const medals = ["🥇", "🥈", "🥉"];
 
   const rowHTML = (r, i) => {
-    const leader = i === 0 && r.points > 0;
+    const leader = i === 0;
     const last = n >= 4 && i === n - 1;
     const badge = i < medals.length ? medals[i] : String(i + 1);
     return `<div class="card lb-row ${leader ? "leader" : ""} ${last ? "last" : ""}">
       <div class="lb-rank ${i >= medals.length ? "num" : ""}" title="Rank ${i + 1}">${badge}</div>
       ${jerseyHTML(r.name)}
       <div class="lb-main">
-        <span class="lb-name">${esc(r.name)}${esc(amharic(r.name))}</span>
-        <span class="lb-sub">${r.exact} exact · ${r.results} results · ${r.weeksWon} weeks won</span>
+        <span class="lb-name">${esc(r.name)}</span>
+        <span class="lb-sub">${r.exact} exact · ${r.results} results</span>
       </div>
       ${leader ? `<span class="lb-deco d1">🎉</span><span class="lb-deco d2">🎊</span><span class="lb-deco d3">✨</span><span class="lb-deco d4">🎈</span><span class="lb-king">👑</span>` : ""}
       ${last ? `<span class="lb-clown">🤡</span>` : ""}
